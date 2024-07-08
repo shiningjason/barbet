@@ -1,0 +1,34 @@
+{
+  "name": "barbet-web-client-app",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "format": "prettier --write \"{*,src/**/*}.{js,jsx,cjs}\"",
+    "lint": "eslint \"{*,src/**/*}.{js,jsx,cjs}\"",
+    "start": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "ahooks": "^3.8.0",
+    "axios": "^1.7.2",
+    "mobx": "^6.13.0",
+    "normalize.css": "^8.0.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.24.1",
+    "styled-components": "^6.1.11"
+  },
+  "devDependencies": {
+    "@0y0/eslint-config-react": "^1.5.0",
+    "@babel/eslint-plugin": "^7.24.7",
+    "@babel/plugin-proposal-class-properties": "^7.18.6",
+    "@babel/plugin-proposal-decorators": "^7.24.7",
+    "@babel/plugin-syntax-jsx": "^7.24.7",
+    "@babel/plugin-transform-class-static-block": "^7.24.7",
+    "eslint": "^8.57.0",
+    "prettier": "^3.3.2",
+    "vite": "^5.3.3"
+  }
+}

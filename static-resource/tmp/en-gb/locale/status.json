@@ -1,0 +1,8 @@
+{
+  "status:COMM0000": "Success",
+  "status:WAPP0101": "Client Network Connection Error",
+  "status:WAPP0102": "Server Response Error",
+  "status:WAPP0103": "Server Under Maintenance",
+  "status:WAPP0104": "Server Unexpected Response",
+  "status:WAPP9999": "Unknown Error"
+}

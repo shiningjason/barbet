@@ -1,0 +1,32 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "BarBet": "Information",
+      "System": "Warning",
+      "Microsoft": "Warning"
+    }
+  },
+  "CorsPolicy": {
+    "Origins": [
+      "*"
+    ]
+  },
+  "DefaultCacheDurationInSecond": 300,
+  "EnableBrotli": true,
+  "EnableSwagger": true,
+  "ResponseCacheMaximumBodySize": 67108864,
+  "ResponseCacheSizeLimit": 104857600,
+  "SsrIndexResponseCacheDurationInSecond": 180,
+  "SsrAssetResponseCacheDurationInSecond": 1800,
+  "GoogleAuthentication": {
+    "ClientId": "",
+    "ClientSecret": ""
+  },
+  "FirewallMiddleware": {
+    "Enable": true
+  },
+  "PerformanceMiddleware": {
+    "Enable": true
+  }
+}

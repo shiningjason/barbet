@@ -1,0 +1,241 @@
+<#@ template language="C#" #>
+<#@ assembly name="System" #>
+<#@ assembly name="System.Core" #>
+<#@ assembly name="System.Net.Http" #>
+<#@ assembly name="$(NuGetPackageRoot)\newtonsoft.json\13.0.1\lib\net45\Newtonsoft.Json.dll" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Net.Http" #>
+<#@ import namespace="System.Text" #>
+<#@ import namespace="System.Text.RegularExpressions" #>
+<#@ import namespace="Newtonsoft.Json.Linq" #>
+<#
+    const string namespaceName = "BarBet.Application.Web";
+#>
+// ReSharper disable All
+using System;
+using Microsoft.Extensions.Configuration;
+
+namespace <#= namespaceName #>;
+
+public static class Config
+{
+    private static IConfiguration? _instance;
+    private static IConfiguration Instance =>
+        _instance ?? throw new InvalidOperationException("Configuration has not been initialized.");
+
+    public static void Initialize(IConfiguration config)
+    {
+        _instance = config;
+    }
+
+    private static T GetValue<T>(string key, T defaultValue = default(T)) =>
+        Instance.GetValue<T>(key) ?? defaultValue;
+
+    private static T GetSection<T>(string key, T defaultValue = default(T)) =>
+        Instance.GetSection(key).Get<T>() ?? defaultValue;
+
+<#
+    AppendModuleConfig("Global", excludePaths: [ "Serilog" ]);
+    WriteLine(string.Empty);
+    AppendModuleConfig("Web");
+#>
+}
+
+<#+
+    private JObject GetConfig(string moduleName)
+    {
+        using var httpClient = new HttpClient();
+        const string consul = "http://localhost:8500/v1/kv/";
+        var response = httpClient.GetStringAsync($"{consul}{moduleName}").ConfigureAwait(false).GetAwaiter().GetResult();
+        var json = Encoding.UTF8.GetString(Convert.FromBase64String(JArray.Parse(response).First["Value"].ToString()));
+        return JObject.Parse(json);
+    }
+
+    private void AppendModuleConfig(
+        string moduleName,
+        string[] includePaths = default,
+        string[] excludePaths = default,
+        string[] excludeChildrenPaths = default
+        )
+    {
+        AppendConfig(moduleName, GetConfig(moduleName), includePaths, excludePaths, excludeChildrenPaths);
+    }
+
+    private void AppendConfig(string key, JToken token, string[] includePaths, string[] excludePaths,
+        string[] excludeChildrenPaths, int indents = 1)
+    {
+        var className = NormalizeMemberName(key.Split(':').Last());
+
+        AppendGenericConfig(key, className, indents);
+        if (WillExcludeChildrenPath(key, excludeChildrenPaths)) return;
+
+        WriteLine(string.Empty);
+        AppendCode(indents, $"public static class {className}");
+        AppendCode(indents, "{");
+        indents++;
+
+        var appended = false;
+        var properties = ((token as JProperty)?.Values<JToken>() ?? token.Children()).OfType<JProperty>().ToArray();
+        foreach (var property in properties)
+        {
+            if (!WillIncludePropertyPath(property, includePaths)) continue;
+            if (WillExcludePropertyPath(property, excludePaths)) continue;
+            if (appended) WriteLine(string.Empty);
+            AppendProperty(property, indents, key, includePaths, excludePaths, excludeChildrenPaths);
+            appended = true;
+        }
+
+        indents--;
+        AppendCode(indents, "}");
+    }
+
+    private void AppendGenericConfig(string key, string className, int indents)
+    {
+        AppendCode(indents, $"public const string {className}SectionKey = \"{key}\";");
+        AppendCode(indents, $"public static class {className}<T>");
+        AppendCode(indents, "{");
+        indents++;
+        AppendCode(indents, "private static T? _value;");
+        AppendCode(indents, $"public static T Get() => _value ??= GetSection<T>({className}SectionKey);");
+        indents--;
+        AppendCode(indents, "}");
+    }
+
+    private void AppendCode(int indents, string code)
+    {
+        const int spacePerIndent = 4;
+        var spaces = new string(' ', indents * spacePerIndent);
+        WriteLine($"{spaces}{code}");
+    }
+
+    private void AppendProperty(
+        JProperty property,
+        int indents,
+        string key,
+        string[] includePaths,
+        string[] excludePaths,
+        string[] excludeChildrenPaths
+        )
+    {
+        var propertyKey = $"{key}:{property.Name}";
+        switch (property.Value.Type)
+        {
+            case JTokenType.Integer or
+                JTokenType.Float or
+                JTokenType.String or
+                JTokenType.Boolean or
+                JTokenType.Null or
+                JTokenType.Date:
+                AppendValueTypeProperty(property, indents, propertyKey);
+                break;
+            case JTokenType.Array:
+                AppendArrayProperty(property, indents, propertyKey);
+                break;
+            default:
+                var propertyPath = GetPropertyPath(property);
+                includePaths = includePaths?.Where(includePath => includePath.StartsWith($"{propertyPath}:")).ToArray();
+                excludePaths = excludePaths?.Where(excludePath => excludePath.StartsWith($"{propertyPath}:")).ToArray();
+                AppendConfig(propertyKey, property.Value, includePaths, excludePaths, excludeChildrenPaths, indents);
+                break;
+        }
+    }
+
+    private void AppendValueTypeProperty(JProperty property, int indents, string key)
+    {
+        var propertyType = GetValueType(property.Value.Type);
+        var propertyName = NormalizeMemberName(property.Name);
+        var fieldName = GetFieldName(propertyName);
+        AppendCode(indents, $"private static {propertyType}? {fieldName};");
+        AppendCode(indents,
+            $"public static {propertyType} {propertyName} => {fieldName} ??= GetValue<{propertyType}>(\"{key}\");");
+    }
+
+    private void AppendArrayProperty(JProperty property, int indents, string key)
+    {
+        var propertyName = NormalizeMemberName(property.Name);
+        var fieldName = GetFieldName(propertyName);
+        var itemTokenType = property.Value.FirstOrDefault(item => item.Type != JTokenType.Null)?.Type ??
+                            JTokenType.Object;
+        switch (itemTokenType)
+        {
+            case JTokenType.Object:
+                AppendGenericConfig(key, propertyName, indents);
+                break;
+            default:
+                var itemType = GetValueType(itemTokenType);
+                AppendCode(indents, $"private static {itemType}[]? {fieldName};");
+                AppendCode(indents,
+                    $"public static {itemType}[] {propertyName} => {fieldName} ??= GetSection<{itemType}[]>(\"{key}\");");
+                break;
+        }
+    }
+
+    private static bool WillExcludeChildrenPath(string configKey, string[] excludeChildrenPaths)
+    {
+        if (excludeChildrenPaths == null || !excludeChildrenPaths.Any()) return false;
+        configKey = Regex.Replace(configKey, "^[^:]+:", string.Empty);
+        return excludeChildrenPaths.Contains(configKey);
+    }
+
+    private static bool WillIncludePropertyPath(JProperty property, string[] includePaths)
+    {
+        if (includePaths == null || !includePaths.Any()) return true;
+        var propertyPath = GetPropertyPath(property);
+        return WillAppendProperty(property.Value.Type)
+            ? includePaths.Contains(propertyPath)
+            : includePaths.Any(includePath => includePath.StartsWith(propertyPath));
+    }
+
+    private static bool WillExcludePropertyPath(JProperty property, string[] excludePaths)
+    {
+        if (excludePaths == null || !excludePaths.Any()) return false;
+        return excludePaths.Contains(GetPropertyPath(property));
+    }
+
+    private static string GetPropertyPath(JProperty property)
+    {
+        var propertyNames = property.Parent.Path.Split('.')
+            .Append(property.Name)
+            .Where(name => !string.IsNullOrEmpty(name)).ToArray();
+        return string.Join(":", propertyNames);
+    }
+
+    private static string NormalizeMemberName(string memberName)
+    {
+        memberName = memberName.Replace("-", "_").Replace(".", "_");
+        if (Regex.IsMatch(memberName, @"^\d")) memberName = "_" + memberName;
+        return memberName;
+    }
+
+    private static string GetFieldName(string propertyName)
+    {
+        return $"_{char.ToLowerInvariant(propertyName[0])}{propertyName.Substring(1)}";
+    }
+
+    private static bool WillAppendProperty(JTokenType type)
+    {
+        return type switch
+        {
+            JTokenType.Array or
+                JTokenType.Integer or
+                JTokenType.Float or
+                JTokenType.String or
+                JTokenType.Boolean or
+                JTokenType.Null or
+                JTokenType.Date => true,
+            _ => false
+            };
+    }
+
+    private static string GetValueType(JTokenType type)
+    {
+        return type switch
+        {
+            JTokenType.Integer => "int",
+            JTokenType.Float => "decimal",
+            JTokenType.Boolean => "bool",
+            JTokenType.String or JTokenType.Null or JTokenType.Date => "string",
+            _ => null
+            };
+    }
+#>

@@ -1,0 +1,29 @@
+﻿{
+  "profiles": {
+    "BarBet.Web": {
+      "commandName": "Project",
+      "launchBrowser": false,
+      "applicationUrl": "http://localhost:5001;https://localhost:5002",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES": "Microsoft.AspNetCore.SpaProxy",
+        "JAEGER_SERVICE_NAME": "BarBetWeb",
+        "JAEGER_AGENT_HOST": "localhost",
+        "JAEGER_AGENT_PORT": "6831",
+        "JAEGER_SAMPLER_TYPE": "const"
+      }
+    },
+    "BarBet.Web(PROD)": {
+      "commandName": "Project",
+      "launchBrowser": false,
+      "applicationUrl": "http://localhost:5001;https://localhost:5002",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Production",
+        "JAEGER_SERVICE_NAME": "BarBetWeb",
+        "JAEGER_AGENT_HOST": "localhost",
+        "JAEGER_AGENT_PORT": "6831",
+        "JAEGER_SAMPLER_TYPE": "const"
+      }
+    }
+  }
+}

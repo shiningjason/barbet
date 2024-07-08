@@ -1,0 +1,8 @@
+{
+  "status:COMM0000": "成功",
+  "status:WAPP0101": "網絡連接錯誤",
+  "status:WAPP0102": "服務器回應錯誤",
+  "status:WAPP0103": "服務器維護中",
+  "status:WAPP0104": "服務器未預期的回應",
+  "status:WAPP9999": "未知錯誤"
+}

@@ -1,0 +1,8 @@
+{
+  "status:COMM0000": "Thành công",
+  "status:WAPP0101": "Lỗi kết nối",
+  "status:WAPP0102": "Lỗi phản hồi từ máy chủ",
+  "status:WAPP0103": "Máy chủ đang bảo trì",
+  "status:WAPP0104": "Phản hồi không mong đợi từ máy chủ",
+  "status:WAPP9999": "Lỗi không xác định"
+}

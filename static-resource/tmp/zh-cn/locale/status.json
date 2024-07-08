@@ -1,0 +1,8 @@
+{
+  "status:COMM0000": "成功",
+  "status:WAPP0101": "网络连接错误",
+  "status:WAPP0102": "服务器响应错误",
+  "status:WAPP0103": "服务器维护中",
+  "status:WAPP0104": "服务器未预期的响应",
+  "status:WAPP9999": "未知错误"
+}
